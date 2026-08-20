@@ -28,7 +28,7 @@ function Login() {
                 variant="outline"
                 size="lg"
                 className="w-full"
-                onClick={() => signIn(p.providerId, { callbackURL: "/" })}
+                onClick={() => signIn(p.providerId, { callbackURL: "/app" })}
               >
                 Continue with {p.label}
               </Button>
@@ -38,8 +38,11 @@ function Login() {
           )}
         </div>
 
-        <Link to="/" className="mt-8 inline-block text-sm text-muted underline-offset-4 hover:text-fg hover:underline">
+        <Link to="/app" className="mt-8 inline-block text-sm text-muted underline-offset-4 hover:text-fg hover:underline">
           Enter as a guest
+        </Link>
+        <Link to="/" className="mt-3 block text-sm text-muted underline-offset-4 hover:text-fg hover:underline">
+          Back to Urelios
         </Link>
       </div>
     </main>

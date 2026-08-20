@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { AuthChip } from "@/components/chamber/auth-chip";
 import { COMPANIONS, type CompanionId } from "@/lib/companions";
 import { cn } from "@/lib/utils";
@@ -9,6 +10,12 @@ type Props = {
 export function Gallery({ onChoose }: Props) {
   return (
     <div className="relative min-h-dvh bg-bg text-fg">
+      <Link
+        to="/"
+        className="absolute top-4 left-4 z-10 text-[11px] font-medium tracking-[0.28em] text-muted uppercase hover:text-fg sm:top-6 sm:left-6"
+      >
+        Urelios
+      </Link>
       <div className="absolute top-4 right-4 z-10 sm:top-6 sm:right-6">
         <AuthChip />
       </div>

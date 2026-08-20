@@ -26,7 +26,7 @@ import type { ChatMessage } from "@/lib/marcus/types";
 import { usePrefs } from "@/lib/prefs-store";
 import { uid } from "@/lib/utils";
 
-export function Chamber() {
+export function Chamber({ initialMind }: { initialMind?: CompanionId }) {
   const user = useCurrentUser();
   const manner = usePrefs((s) => s.manner);
   const voiceId = usePrefs((s) => s.voiceId);
@@ -46,7 +46,7 @@ export function Chamber() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<ConversationSummary[]>([]);
-  const [stage, setStage] = useState<"gallery" | "talk">("gallery");
+  const [stage, setStage] = useState<"gallery" | "talk">(initialMind ? "talk" : "gallery");
 
   const abortRef = useRef<AbortController | null>(null);
   const recRef = useRef<MediaRecorder | null>(null);
@@ -70,7 +70,8 @@ export function Chamber() {
     prefsLoaded.current = true;
     void loadPrefs()
       .then((p) => {
-        if (p) hydrate(p);
+        if (!p) return;
+        hydrate(initialMind ? { ...p, companionId: initialMind } : p);
       })
       .catch(() => {
         /* guest or unauthorized */
@@ -78,7 +79,13 @@ export function Chamber() {
     void listConversations()
       .then(setHistory)
       .catch(() => setHistory([]));
-  }, [user, hydrate]);
+  }, [user, hydrate, initialMind]);
+
+  useEffect(() => {
+    if (!initialMind) return;
+    setCompanion(initialMind);
+    setStage("talk");
+  }, [initialMind, setCompanion]);
 
   useEffect(() => {
     if (!user) return;

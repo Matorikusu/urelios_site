@@ -1,86 +1,33 @@
-import type { ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { SiteShell } from "@/components/site/shell";
 
-export const Route = createFileRoute("/local")({ component: LocalGuide });
+export const Route = createFileRoute("/local")({
+  component: LocalGuide,
+  head: () => ({
+    meta: [{ title: "A program, later — Urelios" }],
+  }),
+});
 
 function LocalGuide() {
   return (
-    <main className="min-h-dvh bg-bg px-6 py-16 text-fg">
-      <div className="mx-auto max-w-xl">
-        <p className="text-[11px] font-medium tracking-[0.28em] text-muted uppercase">Urelios</p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight">Run it yourself</h1>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
-          Eight minds on your machine. Free. No API key.
+    <SiteShell>
+      <main className="mx-auto max-w-xl px-5 py-16 sm:px-8 sm:py-24">
+        <p className="text-[11px] font-medium tracking-[0.22em] text-muted uppercase">Later</p>
+        <h1 className="mt-3 text-4xl font-semibold tracking-tight">A program you can keep</h1>
+        <p className="mt-4 text-base leading-relaxed text-muted">
+          Urelios lives at the table in the browser first. A standalone program — something you
+          can run on your own machine, without an account — will come. Not yet.
         </p>
-
-        <a
-          href="/aurelius-local.zip"
-          download
-          className="mt-8 inline-flex h-12 items-center rounded-full bg-accent px-5 text-sm font-medium text-bg"
+        <p className="mt-4 text-base leading-relaxed text-muted">
+          Until then, sit with the eight minds here. Sign in if you want the papers kept.
+        </p>
+        <Link
+          to="/app"
+          className="mt-10 inline-flex h-12 items-center rounded-full bg-accent px-5 text-sm font-medium text-bg"
         >
-          Download the folder
-        </a>
-
-        <ol className="mt-12 flex flex-col gap-8 text-sm leading-relaxed">
-          <Step n="1" title="Install Ollama (the mind)">
-            Download the free app from <A href="https://ollama.com">ollama.com</A> and open it. It
-            is not a plugin and not a repository. Then in a terminal:
-            <Code>ollama pull llama3.2</Code>
-            That download is about 2 GB, once. Leave Ollama running.
-          </Step>
-          <Step n="2" title="Install Node.js (to open the page)">
-            LTS from <A href="https://nodejs.org">nodejs.org</A>, then open a new terminal.
-          </Step>
-          <Step n="3" title="Start it">
-            Windows: double-click <span className="text-fg">start.bat</span>. Mac/Linux:
-            <Code>bash start.sh</Code>
-            First run downloads llama3.2 (~2 GB, once). Then open{" "}
-            <span className="text-fg">http://localhost:8080</span>.
-          </Step>
-          <Step n="4" title="Put it on a website (GitHub Pages)">
-            Push this folder to a public repo named <span className="text-fg">aurelius</span>.
-            Settings → Pages → Source: <span className="text-fg">GitHub Actions</span>. Anyone can
-            then open <span className="text-fg">https://YOURNAME.github.io/aurelius/</span> in Chrome
-            or Edge. First visit downloads a free model in their browser. No Ollama needed for
-            visitors.
-          </Step>
-        </ol>
-
-        <p className="mt-12 text-xs text-muted">
-          Created by S Whorton — Matorikusu 2026 — All rights reserved.
-        </p>
-        <Link to="/" className="mt-6 inline-block text-sm text-muted hover:text-fg">
-          Back to the chamber
+          Enter the table
         </Link>
-      </div>
-    </main>
-  );
-}
-
-function Step({ n, title, children }: { n: string; title: string; children: ReactNode }) {
-  return (
-    <li className="flex gap-4">
-      <span className="grid size-7 shrink-0 place-items-center rounded-full bg-elevated text-xs font-medium">
-        {n}
-      </span>
-      <div>
-        <p className="font-medium text-fg">{title}</p>
-        <div className="mt-1 text-muted">{children}</div>
-      </div>
-    </li>
-  );
-}
-
-function A({ href, children }: { href: string; children: ReactNode }) {
-  return (
-    <a href={href} className="text-fg underline-offset-4 hover:underline" target="_blank" rel="noreferrer">
-      {children}
-    </a>
-  );
-}
-
-function Code({ children }: { children: ReactNode }) {
-  return (
-    <pre className="mt-2 overflow-x-auto rounded-xl bg-surface px-4 py-3 text-xs text-fg">{children}</pre>
+      </main>
+    </SiteShell>
   );
 }
