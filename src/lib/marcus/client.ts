@@ -1,8 +1,10 @@
+import type { CompanionId } from "@/lib/companions";
 import type { ChatMessage, Manner } from "./types";
 
 export async function streamCounsel(opts: {
   messages: ChatMessage[];
   manner: Manner;
+  companion: CompanionId;
   onDelta: (text: string) => void;
   signal?: AbortSignal;
 }): Promise<string> {
@@ -12,6 +14,7 @@ export async function streamCounsel(opts: {
     body: JSON.stringify({
       messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
       manner: opts.manner,
+      companion: opts.companion,
     }),
     signal: opts.signal,
   });

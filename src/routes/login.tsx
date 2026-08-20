@@ -10,13 +10,13 @@ function Login() {
       <div className="relative w-full max-w-sm text-center">
         <img
           src="/marcus.jpg"
-          alt="Marcus Aurelius"
-          className="mx-auto size-28 rounded-full object-cover face-crop ring-1 ring-line"
+          alt=""
+          className="mx-auto size-24 rounded-full object-cover portrait-crop ring-1 ring-line"
         />
-        <p className="mt-6 text-xs font-medium tracking-widest text-muted uppercase">Aurelius</p>
-        <h1 className="mt-2 text-4xl font-semibold tracking-tight text-fg">Marcus Aurelius</h1>
+        <p className="mt-6 text-[11px] font-medium tracking-[0.28em] text-muted uppercase">Urelios</p>
+        <h1 className="mt-2 text-4xl font-semibold tracking-tight text-fg">Keep the papers</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          Keep your conversations with the emperor. Sign in, then return.
+          Sign in to save conversations with the eight minds. Then return to the table.
         </p>
 
         <div className="mt-8 flex flex-col gap-3">

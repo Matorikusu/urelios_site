@@ -1,7 +1,7 @@
 import { Plus, SlidersHorizontal, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Composer } from "@/components/Composer";
-import { IdentityBlock, Portrait } from "@/components/Portrait";
+import { CompanionSwitch, IdentityBlock, Portrait } from "@/components/Portrait";
 import { Settings } from "@/components/Settings";
 import { Thread } from "@/components/Thread";
 import { speakBrowser, unlockSpeech } from "@/lib/audio";
@@ -17,7 +17,7 @@ import {
 } from "@/lib/storage";
 import type { ChatMessage, Conversation } from "@/lib/types";
 import { uid } from "@/lib/utils";
-import { VOICE_SAMPLE } from "@/lib/voices";
+import { getCompanion, type CompanionId } from "@/lib/companions";
 
 type RecCtor = new () => {
   lang: string;
@@ -55,6 +55,7 @@ export function App() {
   const [ready, setReady] = useState(false);
   const [loadNote, setLoadNote] = useState("Looking for a free local model…");
 
+  const companion = getCompanion(prefs.companionId);
   const abortRef = useRef<AbortController | null>(null);
   const recRef = useRef<{ stop: () => void } | null>(null);
   const scrollerRef = useRef<HTMLDivElement>(null);
@@ -170,14 +171,14 @@ export function App() {
       "Untitled counsel";
     setHistory((prev) => {
       const next: Conversation[] = [
-        { id, title, messages: msgs, updatedAt: Date.now() },
+        { id, title, companionId: prefs.companionId, messages: msgs, updatedAt: Date.now() },
         ...prev.filter((c) => c.id !== id),
       ];
       saveConversations(next);
       return next;
     });
     saveActiveId(id);
-  }, []);
+  }, [prefs.companionId]);
 
   const speak = useCallback(
     async (id: string, text: string, voice = prefs.voiceId) => {
@@ -211,7 +212,7 @@ export function App() {
       setPreviewingId(id);
       setSpeakingId("preview");
       try {
-        await speak("preview", VOICE_SAMPLE, id);
+        await speak("preview", companion.voiceSample, id);
       } finally {
         setPreviewingId(null);
       }
@@ -249,6 +250,7 @@ export function App() {
             ? await streamCounsel({
                 messages: [...prior, userMsg],
                 manner: prefs.manner,
+                companion: prefs.companionId,
                 modelId: prefs.modelId,
                 onProgress: () => {},
                 signal: ac.signal,
@@ -257,6 +259,7 @@ export function App() {
             : await streamOllama({
                 messages: [...prior, userMsg],
                 manner: prefs.manner,
+                companion: prefs.companionId,
                 model: health?.model,
                 signal: ac.signal,
                 onDelta,
@@ -270,7 +273,7 @@ export function App() {
         if (prefs.autoSpeak && finalText) void speak(assistantMsg.id, finalText);
       } catch (err) {
         if ((err as { name?: string }).name === "AbortError") return;
-        const msg = err instanceof Error ? err.message : "Marcus could not be reached.";
+        const msg = err instanceof Error ? err.message : "He could not be reached.";
         setError(msg);
         setMessages((cur) =>
           cur.map((m) =>
@@ -300,6 +303,21 @@ export function App() {
     setSettingsOpen(false);
   }
 
+  function selectCompanion(id: CompanionId) {
+    if (id === prefs.companionId) return;
+    abortRef.current?.abort();
+    interruptCounsel();
+    stopSpeak();
+    setPrefs({ ...prefs, companionId: id });
+    const nextId = uid();
+    setConversationId(nextId);
+    saveActiveId(nextId);
+    setMessages([]);
+    setDraft("");
+    setStreaming(false);
+    setSettingsOpen(false);
+  }
+
   function openConversation(id: string) {
     const found = history.find((c) => c.id === id);
     if (!found) return;
@@ -309,6 +327,7 @@ export function App() {
     setConversationId(id);
     saveActiveId(id);
     setMessages(found.messages);
+    if (found.companionId) setPrefs({ ...prefs, companionId: found.companionId });
     setSettingsOpen(false);
   }
 
@@ -368,8 +387,9 @@ export function App() {
       <div className="relative mx-auto flex min-h-dvh max-w-6xl">
         <aside className="hidden w-80 shrink-0 flex-col border-r border-line lg:flex">
           <div className="p-8">
-            <Portrait speaking={speaking} />
-            <IdentityBlock />
+            <Portrait speaking={speaking} companion={companion} />
+            <IdentityBlock companion={companion} />
+            <CompanionSwitch value={prefs.companionId} onChange={selectCompanion} />
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8">{settingsPanel}</div>
         </aside>
@@ -377,11 +397,11 @@ export function App() {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center gap-3 px-4 py-3 lg:px-6">
             <div className="lg:hidden">
-              <Portrait speaking={speaking} compact />
+              <Portrait speaking={speaking} compact companion={companion} />
             </div>
             <div className="min-w-0 flex-1 lg:hidden">
-              <p className="text-xs font-medium tracking-widest text-muted uppercase">Aurelius</p>
-              <p className="truncate text-sm font-medium text-fg">Marcus Aurelius</p>
+              <p className="text-xs font-medium tracking-widest text-muted uppercase">{companion.line}</p>
+              <p className="truncate text-sm font-medium text-fg">{companion.name}</p>
             </div>
             <div className="hidden flex-1 lg:block">
               <p className="text-xs font-medium tracking-widest text-muted uppercase">A conversation</p>
@@ -412,7 +432,7 @@ export function App() {
                   window.location.hostname !== "localhost" &&
                   window.location.hostname !== "127.0.0.1") ? (
                   <div className="mb-6 rounded-2xl bg-surface px-5 py-6 text-sm leading-relaxed text-muted">
-                    <p className="font-medium text-fg">Preparing Marcus</p>
+                    <p className="font-medium text-fg">Preparing him</p>
                     <p className="mt-2">{loadNote}</p>
                     <p className="mt-3 text-xs">
                       First visit downloads a free model into this browser. After that it is instant.
@@ -424,6 +444,7 @@ export function App() {
                 )
               ) : null}
               <Thread
+                companion={companion}
                 messages={messages}
                 streaming={streaming}
                 speakingId={speakingId}
@@ -444,7 +465,7 @@ export function App() {
                 busy={streaming || !ready}
               />
               <p className="mt-2 text-center text-xs text-muted">
-                {error ?? "He answers from the second century. Free. On this device."}
+                {error ?? companion.footer}
               </p>
             </div>
           </div>
@@ -471,7 +492,10 @@ export function App() {
                 <X className="size-4" />
               </button>
             </div>
-            <div className="overflow-y-auto px-5 pt-4 pb-10">{settingsPanel}</div>
+            <div className="overflow-y-auto px-5 pt-4 pb-10">
+              <CompanionSwitch value={prefs.companionId} onChange={selectCompanion} />
+              <div className="mt-8">{settingsPanel}</div>
+            </div>
           </div>
         </div>
       ) : null}

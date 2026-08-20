@@ -81,6 +81,10 @@
   object-position: 50% 18%;
 }
 
+.einstein-crop {
+  object-position: 50% 22%;
+}
+
 .enter {
   animation: fade-up 400ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }

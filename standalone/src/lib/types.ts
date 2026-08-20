@@ -23,9 +23,12 @@ export const DEFAULT_MANNER: Manner = {
 export const GREETING =
   "You have found me at my papers. Sit, if you wish. Speak of what disturbs the mind — or of whatever you came to say.";
 
+import type { CompanionId } from "./companions";
+
 export type Conversation = {
   id: string;
   title: string;
+  companionId?: CompanionId;
   messages: ChatMessage[];
   updatedAt: number;
 };

@@ -1,11 +1,13 @@
+import { COMPANIONS, type Companion, type CompanionId } from "@/lib/companions";
 import { cn } from "@/lib/utils";
 
-type Props = {
+type PortraitProps = {
   speaking: boolean;
   compact?: boolean;
+  companion: Companion;
 };
 
-export function Portrait({ speaking, compact }: Props) {
+export function Portrait({ speaking, compact, companion }: PortraitProps) {
   return (
     <div
       className={cn(
@@ -14,9 +16,9 @@ export function Portrait({ speaking, compact }: Props) {
       )}
     >
       <img
-        src="/marcus.jpg"
-        alt="Marcus Aurelius"
-        className={cn("size-full object-cover", compact ? "face-crop" : "portrait-crop")}
+        src={companion.portrait}
+        alt={companion.name}
+        className={cn("size-full object-cover", companion.crop)}
       />
       {speaking ? (
         <div className="speak-ring pointer-events-none absolute inset-0 rounded-full" />
@@ -25,18 +27,49 @@ export function Portrait({ speaking, compact }: Props) {
   );
 }
 
-export function IdentityBlock() {
+export function IdentityBlock({ companion }: { companion: Companion }) {
   return (
     <div className="mt-5 text-center">
-      <p className="text-xs font-medium tracking-widest text-muted uppercase">Aurelius</p>
+      <p className="text-[10px] font-medium tracking-[0.22em] text-muted uppercase">{companion.role}</p>
       <h1 className="mt-1 text-2xl leading-tight font-semibold tracking-tight text-fg">
-        Marcus Aurelius
+        {companion.name}
       </h1>
-      <p className="mt-1 text-sm text-muted">Emperor · philosopher · 161–180</p>
-      <p className="mt-4 text-sm leading-relaxed text-muted">
-        He knows his own age, his own notes, and the Stoic art of judgment. He does not know
-        yours. He will reason anyway.
-      </p>
+      <p className="mt-1 text-sm text-muted">{companion.tagline}</p>
+      <p className="mt-4 text-sm leading-relaxed text-muted">{companion.blurb}</p>
+    </div>
+  );
+}
+
+export function MindGrid({
+  value,
+  onChange,
+}: {
+  value: CompanionId;
+  onChange: (id: CompanionId) => void;
+}) {
+  return (
+    <div className="mt-6 grid grid-cols-4 gap-2">
+      {COMPANIONS.map((c) => {
+        const active = c.id === value;
+        return (
+          <button
+            key={c.id}
+            type="button"
+            title={`${c.name} — ${c.tagline}`}
+            onClick={() => onChange(c.id)}
+            className={cn(
+              "rounded-full ring-offset-2 ring-offset-bg transition-opacity duration-150",
+              active ? "ring-2 ring-fg" : "opacity-55 hover:opacity-100",
+            )}
+          >
+            <img
+              src={c.portrait}
+              alt={c.shortName}
+              className={cn("aspect-square w-full rounded-full object-cover", c.crop)}
+            />
+          </button>
+        );
+      })}
     </div>
   );
 }

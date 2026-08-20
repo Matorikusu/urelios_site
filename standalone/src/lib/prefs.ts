@@ -1,8 +1,10 @@
+import { DEFAULT_COMPANION, sanitizeCompanion, type CompanionId } from "./companions";
 import { DEFAULT_MANNER, type Manner } from "./types";
 import { DEFAULT_VOICE, sanitizeVoice } from "./voices";
 import { isModelId, MODELS, type ModelId } from "./engine";
 
 export type Prefs = {
+  companionId: CompanionId;
   modelId: ModelId;
   voiceId: string;
   autoSpeak: boolean;
@@ -12,6 +14,7 @@ export type Prefs = {
 const KEY = "aurelius.local.prefs";
 
 export const DEFAULT_PREFS: Prefs = {
+  companionId: DEFAULT_COMPANION,
   modelId: MODELS[0].id,
   voiceId: DEFAULT_VOICE,
   autoSpeak: true,
@@ -23,6 +26,7 @@ export function loadPrefs(): Prefs {
     const raw = JSON.parse(localStorage.getItem(KEY) || "null") as Partial<Prefs> | null;
     if (!raw) return { ...DEFAULT_PREFS };
     return {
+      companionId: sanitizeCompanion(raw.companionId),
       modelId: raw.modelId && isModelId(raw.modelId) ? raw.modelId : DEFAULT_PREFS.modelId,
       voiceId: sanitizeVoice(raw.voiceId),
       autoSpeak: raw.autoSpeak === false ? false : true,

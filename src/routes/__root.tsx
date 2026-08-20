@@ -4,7 +4,7 @@ import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Aurelius";
+const APP_NAME = "Urelios";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -15,7 +15,7 @@ export const Route = createRootRoute({
       { name: "theme-color", content: "#000000" },
       {
         name: "description",
-        content: "Speak with Marcus Aurelius — in his voice, from his notes, limited to what he knew.",
+        content: "Urelios — eight minds, one table. Speak with Marcus, Einstein, Leonardo, Tesla, Franklin, Turing, Jung, Shakespeare.",
       },
     ],
     links: [

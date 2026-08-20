@@ -7,11 +7,10 @@ function LocalGuide() {
   return (
     <main className="min-h-dvh bg-bg px-6 py-16 text-fg">
       <div className="mx-auto max-w-xl">
-        <p className="text-xs font-medium tracking-widest text-muted uppercase">Aurelius</p>
+        <p className="text-[11px] font-medium tracking-[0.28em] text-muted uppercase">Urelios</p>
         <h1 className="mt-2 text-4xl font-semibold tracking-tight">Run it yourself</h1>
         <p className="mt-3 text-sm leading-relaxed text-muted">
-          Free. No API key. Neural voices. You can run it on your computer, or put it on GitHub
-          Pages so anyone can open the link.
+          Eight minds on your machine. Free. No API key.
         </p>
 
         <a

@@ -1,6 +1,7 @@
 import type { MLCEngineInterface } from "@mlc-ai/web-llm";
 import { buildSystemPrompt, maxTokensFor } from "./prompt";
-import { GREETING, type ChatMessage, type Manner } from "./types";
+import { getCompanion, type CompanionId } from "./companions";
+import type { ChatMessage, Manner } from "./types";
 
 export const MODELS = [
   {
@@ -76,6 +77,7 @@ export function interruptCounsel() {
 export async function streamCounsel(opts: {
   messages: ChatMessage[];
   manner: Manner;
+  companion: CompanionId;
   modelId: string;
   onProgress: (p: Progress) => void;
   onDelta: (text: string) => void;
@@ -88,8 +90,8 @@ export async function streamCounsel(opts: {
   opts.signal?.addEventListener("abort", onAbort, { once: true });
 
   const payload = [
-    { role: "system" as const, content: buildSystemPrompt(opts.manner) },
-    { role: "assistant" as const, content: GREETING },
+    { role: "system" as const, content: buildSystemPrompt(opts.manner, opts.companion) },
+    { role: "assistant" as const, content: getCompanion(opts.companion).greeting },
     ...opts.messages.map((m) => ({ role: m.role, content: m.content })),
   ];
 

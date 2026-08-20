@@ -4,7 +4,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { AuthChip } from "@/components/chamber/auth-chip";
 import { Composer } from "@/components/chamber/composer";
-import { IdentityBlock, Portrait } from "@/components/chamber/portrait-rail";
+import { Gallery } from "@/components/chamber/gallery";
+import { IdentityBlock, MindGrid, Portrait } from "@/components/chamber/portrait-rail";
 import { Thread } from "@/components/chamber/thread";
 import { VoiceManner } from "@/components/chamber/voice-manner";
 import { Button } from "@/components/ui/button";
@@ -19,8 +20,8 @@ import {
   saveTurn,
   type ConversationSummary,
 } from "@/lib/conversations";
+import { getCompanion, type CompanionId } from "@/lib/companions";
 import { speakText, streamCounsel, transcribeAudio } from "@/lib/marcus/client";
-import { VOICE_SAMPLE } from "@/lib/marcus/voices";
 import type { ChatMessage } from "@/lib/marcus/types";
 import { usePrefs } from "@/lib/prefs-store";
 import { uid } from "@/lib/utils";
@@ -30,7 +31,10 @@ export function Chamber() {
   const manner = usePrefs((s) => s.manner);
   const voiceId = usePrefs((s) => s.voiceId);
   const autoSpeak = usePrefs((s) => s.autoSpeak);
+  const companionId = usePrefs((s) => s.companionId);
+  const setCompanion = usePrefs((s) => s.setCompanion);
   const hydrate = usePrefs((s) => s.hydrate);
+  const companion = getCompanion(companionId);
 
   const [conversationId, setConversationId] = useState(() => uid());
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -42,6 +46,7 @@ export function Chamber() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [history, setHistory] = useState<ConversationSummary[]>([]);
+  const [stage, setStage] = useState<"gallery" | "talk">("gallery");
 
   const abortRef = useRef<AbortController | null>(null);
   const recRef = useRef<MediaRecorder | null>(null);
@@ -78,10 +83,10 @@ export function Chamber() {
   useEffect(() => {
     if (!user) return;
     const t = window.setTimeout(() => {
-      void savePrefs({ data: { voiceId, manner, autoSpeak } }).catch(() => {});
+      void savePrefs({ data: { companionId, voiceId, manner, autoSpeak } }).catch(() => {});
     }, 900);
     return () => window.clearTimeout(t);
-  }, [user, voiceId, manner, autoSpeak]);
+  }, [user, companionId, voiceId, manner, autoSpeak]);
 
   useEffect(() => {
     return () => {
@@ -121,15 +126,16 @@ export function Chamber() {
   }, []);
 
   const previewVoice = useCallback(async (id: string) => {
+    const sample = companion.voiceSample;
     stopAudio();
     setPreviewingId(id);
     setSpeakingId("preview");
     try {
       try {
-        const blob = await speakText(VOICE_SAMPLE, id);
+        const blob = await speakText(sample, id);
         await playBlob(blob);
       } catch {
-        await speakBrowser(VOICE_SAMPLE, id);
+        await speakBrowser(sample, id);
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "The voice faltered.");
@@ -137,7 +143,7 @@ export function Chamber() {
       setPreviewingId(null);
       setSpeakingId((cur) => (cur === "preview" ? null : cur));
     }
-  }, []);
+  }, [companion.voiceSample]);
 
   const send = useCallback(
     async (text: string) => {
@@ -156,6 +162,7 @@ export function Chamber() {
         const full = await streamCounsel({
           messages: [...prior, userMsg],
           manner,
+          companion: companionId,
           signal: ac.signal,
           onDelta: (delta) => {
             setMessages((cur) =>
@@ -172,6 +179,7 @@ export function Chamber() {
             data: {
               conversationId,
               titleSource: userMsg.content,
+              companionId,
               manner,
               voiceId,
               userMessage: userMsg,
@@ -186,7 +194,7 @@ export function Chamber() {
         }
       } catch (err) {
         if ((err as { name?: string }).name === "AbortError") return;
-        const msg = err instanceof Error ? err.message : "Marcus could not be reached.";
+        const msg = err instanceof Error ? err.message : "He could not be reached.";
         toast.error(msg);
         setMessages((cur) =>
           cur.map((m) =>
@@ -200,7 +208,7 @@ export function Chamber() {
         abortRef.current = null;
       }
     },
-    [streaming, messages, manner, user, conversationId, voiceId, autoSpeak, speak, stopSpeak],
+    [streaming, messages, manner, companionId, user, conversationId, voiceId, autoSpeak, speak, stopSpeak],
   );
 
   function newConversation() {
@@ -213,6 +221,18 @@ export function Chamber() {
     setHistoryOpen(false);
   }
 
+  function selectCompanion(id: CompanionId) {
+    abortRef.current?.abort();
+    stopSpeak();
+    setCompanion(id);
+    setConversationId(uid());
+    setMessages([]);
+    setDraft("");
+    setStreaming(false);
+    setSettingsOpen(false);
+    setStage("talk");
+  }
+
   async function openConversation(id: string) {
     try {
       const loaded = await loadConversation({ data: id });
@@ -221,8 +241,14 @@ export function Chamber() {
       stopSpeak();
       setConversationId(loaded.id);
       setMessages(loaded.messages);
-      hydrate({ voiceId: loaded.voiceId, manner: loaded.manner, autoSpeak });
+      hydrate({
+        companionId: loaded.companionId,
+        voiceId: loaded.voiceId,
+        manner: loaded.manner,
+        autoSpeak,
+      });
       setHistoryOpen(false);
+      setStage("talk");
     } catch {
       toast.error("That conversation could not be opened.");
     }
@@ -282,13 +308,25 @@ export function Chamber() {
 
   const speaking = speakingId !== null;
 
+  if (stage === "gallery") {
+    return <Gallery onChoose={selectCompanion} />;
+  }
+
   return (
     <div className="relative min-h-dvh bg-bg text-fg">
       <div className="relative mx-auto flex min-h-dvh max-w-6xl">
         <aside className="hidden w-80 shrink-0 flex-col border-r border-line lg:flex">
           <div className="p-8">
-            <Portrait speaking={speaking} />
-            <IdentityBlock />
+            <Portrait speaking={speaking} companion={companion} />
+            <IdentityBlock companion={companion} />
+            <MindGrid value={companionId} onChange={selectCompanion} />
+            <button
+              type="button"
+              onClick={() => setStage("gallery")}
+              className="mt-5 w-full text-center text-[10px] font-medium tracking-[0.22em] text-muted uppercase hover:text-fg"
+            >
+              All minds
+            </button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto px-6 pb-8">
             <VoiceManner onPreviewVoice={(id) => void previewVoice(id)} previewingId={previewingId} />
@@ -298,14 +336,26 @@ export function Chamber() {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center gap-3 px-4 py-3 lg:px-6">
             <div className="lg:hidden">
-              <Portrait speaking={speaking} compact />
+              <Portrait speaking={speaking} compact companion={companion} />
             </div>
-            <div className="min-w-0 flex-1 lg:hidden">
-              <p className="text-xs font-medium tracking-widest text-muted uppercase">Aurelius</p>
-              <p className="truncate text-sm font-medium text-fg">Marcus Aurelius</p>
-            </div>
+            <button
+              type="button"
+              className="min-w-0 flex-1 text-left lg:hidden"
+              onClick={() => setStage("gallery")}
+            >
+              <p className="text-[10px] font-medium tracking-[0.22em] text-muted uppercase">
+                {companion.role}
+              </p>
+              <p className="truncate text-sm font-medium text-fg">{companion.name}</p>
+            </button>
             <div className="hidden flex-1 lg:block">
-              <p className="text-xs font-medium tracking-widest text-muted uppercase">A conversation</p>
+              <button
+                type="button"
+                onClick={() => setStage("gallery")}
+                className="text-[11px] font-medium tracking-[0.28em] text-muted uppercase hover:text-fg"
+              >
+                Urelios
+              </button>
             </div>
             <Button
               type="button"
@@ -343,6 +393,7 @@ export function Chamber() {
           <div ref={scrollerRef} className="min-h-0 flex-1 overflow-y-auto px-4 py-4 pb-8 lg:px-10 lg:py-6">
             <div className="mx-auto max-w-2xl">
               <Thread
+                companion={companion}
                 messages={messages}
                 streaming={streaming}
                 speakingId={speakingId}
@@ -361,10 +412,9 @@ export function Chamber() {
                 onMicToggle={() => void toggleMic()}
                 recording={recording}
                 busy={streaming}
+                placeholder={companion.placeholder}
               />
-              <p className="mt-2 text-center text-xs text-muted">
-                He answers from the second century. Sign in to keep the papers.
-              </p>
+              <p className="mt-2 text-center text-xs text-muted">{companion.footer}</p>
             </div>
           </div>
         </div>
@@ -379,10 +429,23 @@ export function Chamber() {
               Voice & manner
             </Drawer.Title>
             <Drawer.Description className="sr-only">
-              Choose how Marcus speaks and which voice he uses.
+              Choose a companion, how he speaks, and which voice he uses.
             </Drawer.Description>
             <div className="overflow-y-auto px-5 pt-4 pb-10">
-              <VoiceManner onPreviewVoice={(id) => void previewVoice(id)} previewingId={previewingId} />
+              <MindGrid value={companionId} onChange={selectCompanion} />
+              <button
+                type="button"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  setStage("gallery");
+                }}
+                className="mt-5 w-full text-center text-[10px] font-medium tracking-[0.22em] text-muted uppercase hover:text-fg"
+              >
+                All minds
+              </button>
+              <div className="mt-8">
+                <VoiceManner onPreviewVoice={(id) => void previewVoice(id)} previewingId={previewingId} />
+              </div>
             </div>
           </Drawer.Content>
         </Drawer.Portal>
@@ -408,6 +471,9 @@ export function Chamber() {
                       onClick={() => void openConversation(c.id)}
                       className="min-w-0 flex-1 rounded-xl px-3 py-2.5 text-left hover:bg-elevated"
                     >
+                      <span className="block text-[10px] font-medium tracking-widest text-muted uppercase">
+                        {getCompanion(c.companionId).shortName}
+                      </span>
                       <span className="block truncate text-sm text-fg">{c.title}</span>
                     </button>
                     <Button

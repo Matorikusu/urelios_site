@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { getCompanion, sanitizeCompanion } from "@/lib/companions";
 import { buildSystemPrompt, maxTokensFor, sanitizeManner } from "@/lib/marcus/prompt";
-import { GREETING } from "@/lib/marcus/types";
 
 type Incoming = { role: string; content: string };
 
@@ -15,9 +15,9 @@ function pickOllamaModel(names: string[]): string | null {
 }
 
 async function chatOllama(request: Request): Promise<Response | null> {
-  let body: { messages?: Incoming[]; manner?: unknown };
+  let body: { messages?: Incoming[]; manner?: unknown; companion?: unknown };
   try {
-    body = (await request.json()) as { messages?: Incoming[]; manner?: unknown };
+    body = (await request.json()) as { messages?: Incoming[]; manner?: unknown; companion?: unknown };
   } catch {
     return Response.json({ error: "Nothing was said." }, { status: 400 });
   }
@@ -39,9 +39,10 @@ async function chatOllama(request: Request): Promise<Response | null> {
   }
 
   const manner = sanitizeManner(body.manner);
+  const companion = sanitizeCompanion(body.companion);
   const raw = Array.isArray(body.messages) ? body.messages : [];
   const messages: { role: "system" | "user" | "assistant"; content: string }[] = [
-    { role: "system", content: buildSystemPrompt(manner) },
+    { role: "system", content: buildSystemPrompt(manner, companion) },
   ];
   for (const m of raw.slice(-24)) {
     if ((m.role !== "user" && m.role !== "assistant") || typeof m.content !== "string") continue;
@@ -130,14 +131,15 @@ export const Route = createFileRoute("/api/chat")({
           );
         }
 
-        let body: { messages?: Incoming[]; manner?: unknown };
+        let body: { messages?: Incoming[]; manner?: unknown; companion?: unknown };
         try {
-          body = (await request.json()) as { messages?: Incoming[]; manner?: unknown };
+          body = (await request.json()) as { messages?: Incoming[]; manner?: unknown; companion?: unknown };
         } catch {
           return Response.json({ error: "Nothing was said." }, { status: 400 });
         }
 
         const manner = sanitizeManner(body.manner);
+        const companion = sanitizeCompanion(body.companion);
         const raw = Array.isArray(body.messages) ? body.messages : [];
         const messages: { role: "user" | "assistant"; content: string }[] = [];
         for (const m of raw.slice(-24)) {
@@ -150,10 +152,10 @@ export const Route = createFileRoute("/api/chat")({
           return Response.json({ error: "Speak first, then I will answer." }, { status: 400 });
         }
 
-        const system = buildSystemPrompt(manner);
+        const system = buildSystemPrompt(manner, companion);
         const payload = [
           { role: "system" as const, content: system },
-          { role: "assistant" as const, content: GREETING },
+          { role: "assistant" as const, content: getCompanion(companion).greeting },
           ...messages,
         ];
 
@@ -175,7 +177,7 @@ export const Route = createFileRoute("/api/chat")({
         if (!upstream.ok || !upstream.body) {
           const errText = await upstream.text().catch(() => "");
           console.error("[chat] xAI error", upstream.status, errText.slice(0, 400));
-          return Response.json({ error: "Marcus could not be reached." }, { status: 502 });
+          return Response.json({ error: "He could not be reached." }, { status: 502 });
         }
 
         const encoder = new TextEncoder();

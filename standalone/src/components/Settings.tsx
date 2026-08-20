@@ -1,15 +1,10 @@
 import { Volume2 } from "lucide-react";
-import type { Conversation, Register } from "@/lib/types";
+import { getCompanion } from "@/lib/companions";
 import type { Prefs } from "@/lib/prefs";
+import type { Conversation } from "@/lib/types";
 import { MODELS } from "@/lib/engine";
 import { VOICES } from "@/lib/voices";
 import { cn } from "@/lib/utils";
-
-const REGISTERS: { id: Register; label: string; hint: string }[] = [
-  { id: "journal", label: "Journal", hint: "Notes to himself" },
-  { id: "counsel", label: "Counsel", hint: "A man to a man" },
-  { id: "emperor", label: "Emperor", hint: "Duty, then philosophy" },
-];
 
 type Props = {
   prefs: Prefs;
@@ -36,7 +31,8 @@ export function Settings({
   modelName,
   loadNote,
 }: Props) {
-  const hint = REGISTERS.find((r) => r.id === prefs.manner.register)?.hint;
+  const companion = getCompanion(prefs.companionId);
+  const hint = companion.registers.find((r) => r.id === prefs.manner.register)?.hint;
 
   return (
     <div className="flex flex-col gap-8">
@@ -86,7 +82,7 @@ export function Settings({
         <h2 className="text-xs font-medium tracking-widest text-muted uppercase">Manner</h2>
         <p className="mt-1 text-sm text-muted">How he thinks on the page.</p>
         <div className="mt-3 grid grid-cols-3 gap-1 rounded-full bg-surface p-1">
-          {REGISTERS.map((r) => (
+          {companion.registers.map((r) => (
             <button
               key={r.id}
               type="button"

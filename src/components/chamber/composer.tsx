@@ -10,7 +10,7 @@ type Props = {
   onMicToggle: () => void;
   recording: boolean;
   busy: boolean;
-  disabled?: boolean;
+  placeholder?: string;
 };
 
 export function Composer({
@@ -20,7 +20,7 @@ export function Composer({
   onMicToggle,
   recording,
   busy,
-  disabled,
+  placeholder,
 }: Props) {
   const ref = useRef<HTMLTextAreaElement>(null);
 
@@ -33,13 +33,13 @@ export function Composer({
 
   function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!busy && !disabled) onSend();
+    if (!busy) onSend();
   }
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (!busy && !disabled) onSend();
+      if (!busy) onSend();
     }
   }
 
@@ -51,14 +51,14 @@ export function Composer({
         size="icon"
         onClick={onMicToggle}
         disabled={busy}
-        aria-label={recording ? "Stop recording" : "Speak to Marcus"}
+        aria-label={recording ? "Stop recording" : "Speak"}
         aria-pressed={recording}
         className={cn(recording && "speak-ring")}
       >
         {recording ? <Square className="size-4 fill-current" /> : <Mic className="size-4" />}
       </Button>
       <label className="sr-only" htmlFor="counsel">
-        Speak to Marcus
+        Speak
       </label>
       <textarea
         id="counsel"
@@ -68,7 +68,7 @@ export function Composer({
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={onKeyDown}
         disabled={busy || recording}
-        placeholder={recording ? "Listening…" : "Speak of what disturbs the mind"}
+        placeholder={recording ? "Listening…" : placeholder || "Speak of what disturbs the mind"}
         className={cn(
           "max-h-40 min-h-11 flex-1 resize-none rounded-2xl bg-surface px-4 py-2.5",
           "text-sm leading-relaxed text-fg placeholder:text-muted",
@@ -80,7 +80,7 @@ export function Composer({
       <Button
         type="submit"
         size="icon"
-        disabled={busy || recording || !value.trim() || disabled}
+        disabled={busy || recording || !value.trim()}
         aria-label="Send"
       >
         <Send className="size-4" />

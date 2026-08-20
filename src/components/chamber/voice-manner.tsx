@@ -3,16 +3,10 @@ import { Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
-import type { Register } from "@/lib/marcus/types";
+import { getCompanion } from "@/lib/companions";
 import { VOICES } from "@/lib/marcus/voices";
 import { usePrefs } from "@/lib/prefs-store";
 import { cn } from "@/lib/utils";
-
-const REGISTERS: { id: Register; label: string; hint: string }[] = [
-  { id: "journal", label: "Journal", hint: "Notes to himself" },
-  { id: "counsel", label: "Counsel", hint: "A man to a man" },
-  { id: "emperor", label: "Emperor", hint: "Duty, then philosophy" },
-];
 
 type Props = {
   onPreviewVoice: (voiceId: string) => void;
@@ -20,6 +14,8 @@ type Props = {
 };
 
 export function VoiceManner({ onPreviewVoice, previewingId }: Props) {
+  const companionId = usePrefs((s) => s.companionId);
+  const companion = getCompanion(companionId);
   const voiceId = usePrefs((s) => s.voiceId);
   const manner = usePrefs((s) => s.manner);
   const autoSpeak = usePrefs((s) => s.autoSpeak);
@@ -28,7 +24,7 @@ export function VoiceManner({ onPreviewVoice, previewingId }: Props) {
   const setAusterity = usePrefs((s) => s.setAusterity);
   const setBrevity = usePrefs((s) => s.setBrevity);
   const setAutoSpeak = usePrefs((s) => s.setAutoSpeak);
-  const activeRegister = REGISTERS.find((r) => r.id === manner.register);
+  const activeRegister = companion.registers.find((r) => r.id === manner.register);
 
   return (
     <div className="flex flex-col gap-8">
@@ -36,7 +32,7 @@ export function VoiceManner({ onPreviewVoice, previewingId }: Props) {
         <h2 className="text-xs font-medium tracking-widest text-muted uppercase">Manner</h2>
         <p className="mt-1 text-sm text-muted">How he thinks on the page.</p>
         <div className="mt-3 grid grid-cols-3 gap-1 rounded-full bg-surface p-1">
-          {REGISTERS.map((r) => (
+          {companion.registers.map((r) => (
             <button
               key={r.id}
               type="button"

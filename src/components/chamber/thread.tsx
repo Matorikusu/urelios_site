@@ -1,8 +1,11 @@
 import { Loader2, Square, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { GREETING, type ChatMessage } from "@/lib/marcus/types";
+import type { Companion } from "@/lib/companions";
+import type { ChatMessage } from "@/lib/marcus/types";
+import { cn } from "@/lib/utils";
 
 type Props = {
+  companion: Companion;
   messages: ChatMessage[];
   streaming: boolean;
   speakingId: string | null;
@@ -10,17 +13,25 @@ type Props = {
   onStopSpeak: () => void;
 };
 
-export function Thread({ messages, streaming, speakingId, onSpeak, onStopSpeak }: Props) {
+export function Thread({
+  companion,
+  messages,
+  streaming,
+  speakingId,
+  onSpeak,
+  onStopSpeak,
+}: Props) {
   const empty = messages.length === 0;
 
   return (
     <div className="flex flex-col gap-6">
       {empty ? (
         <AssistantBubble
-          text={GREETING}
+          companion={companion}
+          text={companion.greeting}
           speaking={speakingId === "greeting"}
           streaming={false}
-          onSpeak={() => onSpeak("greeting", GREETING)}
+          onSpeak={() => onSpeak("greeting", companion.greeting)}
           onStopSpeak={onStopSpeak}
         />
       ) : (
@@ -30,6 +41,7 @@ export function Thread({ messages, streaming, speakingId, onSpeak, onStopSpeak }
           ) : (
             <AssistantBubble
               key={m.id}
+              companion={companion}
               text={m.content}
               speaking={speakingId === m.id}
               streaming={streaming && m === messages[messages.length - 1]}
@@ -54,12 +66,14 @@ function UserBubble({ text }: { text: string }) {
 }
 
 function AssistantBubble({
+  companion,
   text,
   speaking,
   streaming,
   onSpeak,
   onStopSpeak,
 }: {
+  companion: Companion;
   text: string;
   speaking: boolean;
   streaming: boolean;
@@ -69,15 +83,18 @@ function AssistantBubble({
   return (
     <div className="flex gap-3">
       <img
-        src="/marcus.jpg"
+        src={companion.portrait}
         alt=""
-        className="mt-0.5 size-8 shrink-0 rounded-full object-cover face-crop ring-1 ring-line"
+        className={cn(
+          "mt-0.5 size-8 shrink-0 rounded-full object-cover ring-1 ring-line",
+          companion.crop,
+        )}
       />
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium tracking-widest text-muted uppercase">Marcus</p>
+        <p className="text-xs font-medium tracking-widest text-muted uppercase">{companion.shortName}</p>
         <p className="mt-1 text-base leading-relaxed text-fg whitespace-pre-wrap">
           {text}
-          {streaming && !text ? <span className="text-muted">He considers…</span> : null}
+          {streaming && !text ? <span className="text-muted">{companion.considers}</span> : null}
           {streaming ? (
             <span className="ml-0.5 inline-block h-4 w-px translate-y-0.5 bg-fg/70" />
           ) : null}

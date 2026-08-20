@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { authMiddleware } from "@/lib/auth/middleware";
+import { sanitizeCompanion, type CompanionId } from "@/lib/companions";
 import { getSql } from "@/lib/db";
 import { DEFAULT_MANNER, type ChatMessage, type Manner, type Register } from "@/lib/marcus/types";
 import { sanitizeVoice } from "@/lib/marcus/voices";
@@ -8,10 +9,12 @@ import { sanitizeManner } from "@/lib/marcus/prompt";
 export type ConversationSummary = {
   id: string;
   title: string;
+  companionId: CompanionId;
   updatedAt: string;
 };
 
 export type Prefs = {
+  companionId: CompanionId;
   voiceId: string;
   manner: Manner;
   autoSpeak: boolean;
@@ -23,6 +26,7 @@ type ConversationRow = {
   updated_at: string;
   manner_json: string;
   voice_id: string;
+  companion_id: string;
 };
 
 type MessageRow = {
@@ -42,7 +46,7 @@ export const listConversations = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const sql = await getSql();
     const rows = await sql<ConversationRow>`
-      select id, title, updated_at, manner_json, voice_id
+      select id, title, updated_at, manner_json, voice_id, companion_id
       from conversations
       where user_id = ${context.userId}
       order by updated_at desc
@@ -52,6 +56,7 @@ export const listConversations = createServerFn({ method: "GET" })
       (r): ConversationSummary => ({
         id: r.id,
         title: r.title,
+        companionId: sanitizeCompanion(r.companion_id),
         updatedAt: r.updated_at,
       }),
     );
@@ -63,7 +68,7 @@ export const loadConversation = createServerFn({ method: "POST" })
   .handler(async ({ context, data: id }) => {
     const sql = await getSql();
     const conv = await sql<ConversationRow>`
-      select id, title, updated_at, manner_json, voice_id
+      select id, title, updated_at, manner_json, voice_id, companion_id
       from conversations
       where id = ${id} and user_id = ${context.userId}
       limit 1
@@ -85,6 +90,7 @@ export const loadConversation = createServerFn({ method: "POST" })
       id: row.id,
       title: row.title,
       voiceId: sanitizeVoice(row.voice_id),
+      companionId: sanitizeCompanion(row.companion_id),
       manner,
       messages: msgs
         .filter((m) => m.role === "user" || m.role === "assistant")
@@ -104,6 +110,7 @@ export const saveTurn = createServerFn({ method: "POST" })
     (input: {
       conversationId: string;
       titleSource: string;
+      companionId: CompanionId;
       manner: Manner;
       voiceId: string;
       userMessage: ChatMessage;
@@ -114,6 +121,7 @@ export const saveTurn = createServerFn({ method: "POST" })
     const sql = await getSql();
     const mannerJson = JSON.stringify(sanitizeManner(data.manner));
     const voiceId = sanitizeVoice(data.voiceId);
+    const companionId = sanitizeCompanion(data.companionId);
     const title = titleFrom(data.titleSource);
     const existing = await sql<{ id: string }>`
       select id from conversations where id = ${data.conversationId} and user_id = ${context.userId} limit 1
@@ -121,13 +129,13 @@ export const saveTurn = createServerFn({ method: "POST" })
     if (existing[0]) {
       await sql`
         update conversations
-        set updated_at = now(), manner_json = ${mannerJson}, voice_id = ${voiceId}
+        set updated_at = now(), manner_json = ${mannerJson}, voice_id = ${voiceId}, companion_id = ${companionId}
         where id = ${data.conversationId} and user_id = ${context.userId}
       `;
     } else {
       await sql`
-        insert into conversations (id, user_id, title, manner_json, voice_id)
-        values (${data.conversationId}, ${context.userId}, ${title}, ${mannerJson}, ${voiceId})
+        insert into conversations (id, user_id, title, manner_json, voice_id, companion_id)
+        values (${data.conversationId}, ${context.userId}, ${title}, ${mannerJson}, ${voiceId}, ${companionId})
       `;
     }
     await sql`
@@ -159,8 +167,9 @@ export const loadPrefs = createServerFn({ method: "GET" })
       austerity: number;
       brevity: number;
       auto_speak: boolean;
+      companion_id: string;
     }>`
-      select voice_id, register, austerity, brevity, auto_speak
+      select voice_id, register, austerity, brevity, auto_speak, companion_id
       from marcus_prefs where user_id = ${context.userId} limit 1
     `;
     const r = rows[0];
@@ -168,6 +177,7 @@ export const loadPrefs = createServerFn({ method: "GET" })
     const register: Register =
       r.register === "journal" || r.register === "emperor" ? r.register : "counsel";
     return {
+      companionId: sanitizeCompanion(r.companion_id),
       voiceId: sanitizeVoice(r.voice_id),
       autoSpeak: Boolean(r.auto_speak),
       manner: sanitizeManner({
@@ -185,14 +195,16 @@ export const savePrefs = createServerFn({ method: "POST" })
     const sql = await getSql();
     const manner = sanitizeManner(data.manner);
     const voiceId = sanitizeVoice(data.voiceId);
+    const companionId = sanitizeCompanion(data.companionId);
     await sql`
-      insert into marcus_prefs (user_id, voice_id, register, austerity, brevity, auto_speak)
-      values (${context.userId}, ${voiceId}, ${manner.register}, ${manner.austerity}, ${manner.brevity}, ${data.autoSpeak})
+      insert into marcus_prefs (user_id, voice_id, register, austerity, brevity, auto_speak, companion_id)
+      values (${context.userId}, ${voiceId}, ${manner.register}, ${manner.austerity}, ${manner.brevity}, ${data.autoSpeak}, ${companionId})
       on conflict (user_id) do update set
         voice_id = excluded.voice_id,
         register = excluded.register,
         austerity = excluded.austerity,
         brevity = excluded.brevity,
-        auto_speak = excluded.auto_speak
+        auto_speak = excluded.auto_speak,
+        companion_id = excluded.companion_id
     `;
   });

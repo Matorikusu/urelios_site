@@ -1,5 +1,6 @@
 import { buildSystemPrompt, maxTokensFor } from "./prompt";
 import type { ChatMessage, Manner } from "./types";
+import type { CompanionId } from "./companions";
 
 const OLLAMA = "http://127.0.0.1:11434";
 
@@ -126,6 +127,7 @@ async function streamNdjson(
 async function streamViaProxy(opts: {
   messages: ChatMessage[];
   manner: Manner;
+  companion: CompanionId;
   onDelta: (text: string) => void;
   signal?: AbortSignal;
 }): Promise<string> {
@@ -134,7 +136,7 @@ async function streamViaProxy(opts: {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       messages: opts.messages.map((m) => ({ role: m.role, content: m.content })),
-      system: buildSystemPrompt(opts.manner),
+      system: buildSystemPrompt(opts.manner, opts.companion),
       max_tokens: maxTokensFor(opts.manner),
     }),
     signal: opts.signal,
@@ -149,12 +151,13 @@ async function streamViaProxy(opts: {
 async function streamDirect(opts: {
   messages: ChatMessage[];
   manner: Manner;
+  companion: CompanionId;
   model: string;
   onDelta: (text: string) => void;
   signal?: AbortSignal;
 }): Promise<string> {
   const payload = [
-    { role: "system", content: buildSystemPrompt(opts.manner) },
+    { role: "system", content: buildSystemPrompt(opts.manner, opts.companion) },
     ...opts.messages.map((m) => ({ role: m.role, content: m.content })),
   ];
   const res = await fetch(`${OLLAMA}/api/chat`, {
@@ -178,6 +181,7 @@ async function streamDirect(opts: {
 export async function streamOllama(opts: {
   messages: ChatMessage[];
   manner: Manner;
+  companion: CompanionId;
   model?: string | null;
   onDelta: (text: string) => void;
   signal?: AbortSignal;
